@@ -2,6 +2,18 @@
 
 > **Predict stock price movements using machine learning, technical indicators, and news sentiment analysis**
 
+> ### ⚠️ Status: the sentiment comparison has **not** been run on real news
+>
+> When no NewsAPI/Finnhub key is configured, the news pipeline falls back to
+> **generated placeholder headlines** (`src/data_loader.py`,
+> `_get_sample_news_data`): 8 fixed templates cycling every 3 days, identical
+> for every ticker. Every cached run in this repo used that fallback.
+>
+> So the project's central question — *does news sentiment improve prediction
+> accuracy?* — **is still open.** The price, indicator, split and model code is
+> real and runs; the sentiment input is a stub. See
+> [What is and isn't measured](#-what-is-and-isnt-measured).
+
 ## 🎯 Project Goal
 
 This project builds an end-to-end system that predicts **next-day stock price direction (Up/Down)** by combining:
@@ -18,14 +30,12 @@ The key question: **Does news sentiment improve prediction accuracy?**
 ### 1. Setup Environment
 
 ```powershell
-# Navigate to project directory
-cd "C:\Users\Shree Londhe\Desktop\Stock Movement Analyzer\news_stock_analyzer"
+git clone https://github.com/Shree-2004/stock-movement-analyzer.git
+cd stock-movement-analyzer
 
-# Activate virtual environment
+python -m venv venv
 .\venv\Scripts\Activate.ps1
-
-# Verify installation
-python -c "import pandas, yfinance, transformers; print('✅ All dependencies installed')"
+pip install -r requirements.txt
 ```
 
 ### 2. Configure API Keys (Optional)
@@ -34,7 +44,8 @@ python -c "import pandas, yfinance, transformers; print('✅ All dependencies in
 # Copy template
 copy .env.template .env
 
-# Edit .env and add your API keys (optional - sample data works without keys)
+# Without a key the news pipeline returns PLACEHOLDER headlines, not real news.
+# A real sentiment result requires a key (see the Status note at the top).
 # Get free keys from:
 # - NewsAPI: https://newsapi.org
 # - Finnhub: https://finnhub.io
@@ -46,8 +57,6 @@ copy .env.template .env
 
 ```powershell
 # Set Python path
-$env:PYTHONPATH="C:\Users\Shree Londhe\Desktop\Stock Movement Analyzer\news_stock_analyzer"
-
 # Run with default settings (AAPL, 2022-2024)
 python main.py
 
@@ -68,8 +77,6 @@ streamlit run app.py
 #### Option C: Test Individual Modules
 
 ```powershell
-$env:PYTHONPATH="C:\Users\Shree Londhe\Desktop\Stock Movement Analyzer\news_stock_analyzer"
-
 # Test data loader
 python -m src.data_loader
 
@@ -91,22 +98,20 @@ python -m src.model
 ## 📁 Project Structure
 
 ```
-news_stock_analyzer/
+stock-movement-analyzer/
 ├── src/                    # Source code modules
 │   ├── __init__.py        # Package initialization
 │   ├── config.py          # Configuration settings
 │   ├── utils.py           # Utility functions
-│   ├── data_loader.py     # Stock & news data collection (coming next)
+│   ├── data_loader.py     # Stock (yfinance) + news; falls back to placeholders
 │   ├── preprocessing.py   # Data cleaning & technical indicators
 │   ├── sentiment.py       # FinBERT sentiment analysis
 │   ├── features.py        # Feature engineering
 │   ├── model.py           # ML model training & evaluation
-│   └── evaluation.py      # Performance metrics & visualization
 ├── data/                   # Data storage
 │   └── cache/             # Cached API responses
 ├── models/                 # Trained model files
-├── notebooks/              # Jupyter notebooks for exploration
-├── app.py                  # Streamlit dashboard (coming soon)
+├── app.py                  # Streamlit dashboard
 ├── requirements.txt        # Python dependencies
 ├── .env.template          # API key template
 └── README.md              # This file
@@ -142,12 +147,42 @@ news_stock_analyzer/
 
 ---
 
-## 📊 Expected Results
+## 📊 What is and isn't measured
 
-- **Baseline (Technical only)**: 52-58% accuracy
-- **With Sentiment**: 55-62% accuracy (3-5% improvement)
-- **Best Model**: Random Forest or XGBoost
-- **Key Insight**: Sentiment helps most during high-volatility events
+**Real and working.** OHLCV from Yahoo Finance; the five technical-indicator
+families; a chronological train/test split with no shuffle; `StandardScaler`
+fit on train only and `transform`-ed on test. There is no scaling or ordering
+leak — that part was done correctly.
+
+**Not established: anything about news sentiment.**
+
+An earlier local run on AAPL 2024 reported 57.33% accuracy without sentiment
+and 60.00% with, on a 75-day test set. Two separate problems make that
+unusable as a result:
+
+**1. The sentiment input was synthetic.** 8 templated headlines on a 24-day
+loop, carrying no information about the stock by construction. The run also
+ranked `Sentiment_mean` 2nd by feature importance — which is evidence of a
+model fitting a periodic artifact, not evidence that sentiment has value.
+
+**2. The test set is too small to separate those numbers from chance.** Every
+reported figure is an integer count out of 75:
+
+| | without sentiment | with sentiment | difference |
+|---|---|---|---|
+| Logistic Regression | 41/75 | 42/75 | +1 prediction |
+| Random Forest | 42/75 | 44/75 | +2 predictions |
+| XGBoost | 43/75 | 45/75 | +2 predictions |
+
+The headline "+2.67% improvement" is **two extra correct predictions**. A 95%
+confidence interval on 60% runs from **48.9% to 71.1%** — it includes chance
+(z = 1.73 against a 50% null).
+
+**What answering the question would require:** a real dated news corpus with
+publication timestamps (so no article can postdate the day it is used to
+predict), and a test set large enough to detect an effect of a few percentage
+points — which, at these effect sizes, means thousands of observations rather
+than 75.
 
 ---
 
@@ -193,7 +228,7 @@ news_stock_analyzer/
 - Aligned data by date
 - Created target labels
 
-✅ **STEP 4: Sentiment Analysis** (COMPLETED)
+⚠️ **STEP 4: Sentiment Analysis** (CODE COMPLETE, NOT VALIDATED — ran on placeholder headlines, not real news)
 - Loaded FinBERT model
 - Analyzed news sentiment
 - Aggregated daily scores
@@ -211,7 +246,7 @@ news_stock_analyzer/
 - Trained XGBoost
 - Compared with/without sentiment
 
-✅ **STEP 7: Evaluation** (COMPLETED)
+⚠️ **STEP 7: Evaluation** (RUN, BUT NOT CONCLUSIVE — see [What is and isn't measured](#-what-is-and-isnt-measured))
 - Generated confusion matrices
 - Calculated all metrics
 - Created visualizations
@@ -245,6 +280,9 @@ news_stock_analyzer/
 - **Class imbalance**: Markets tend to go up over time
 
 ### Limitations
+- **The sentiment result is not validated** — cached runs used placeholder
+  headlines, and the 75-day test set cannot separate a few percentage points
+  from chance. Treat the sentiment half as unfinished.
 - Only considers news sentiment (not fundamentals, macroeconomics)
 - Historical patterns may not hold in future
 - Transaction costs not included

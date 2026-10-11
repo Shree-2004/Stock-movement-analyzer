@@ -293,16 +293,27 @@ class NewsDataLoader:
     
     def _get_sample_news_data(self, start_date, end_date):
         """
-        Generate sample news data for testing without API keys.
-        
+        PLACEHOLDER headlines so the pipeline runs without API keys.
+
+        THIS IS NOT NEWS. It cycles 8 fixed templates every 3 days, with the
+        ticker name substituted in, and never looks at what actually happened.
+        The result is a deterministic 24-day periodic signal carrying zero
+        information about the stock.
+
+        Any sentiment-vs-no-sentiment comparison built on this output is
+        measuring an artifact, not news. A model that ranks a sentiment
+        feature highly on this data is overfitting the period. Configure a
+        NewsAPI or Finnhub key before drawing any conclusion about sentiment.
+
         Args:
             start_date (str): Start date
             end_date (str): End date
-            
+
         Returns:
-            pd.DataFrame: Sample news data
+            pd.DataFrame: Placeholder rows shaped like the real news frame.
         """
-        print("📝 Generating sample news data for demonstration...")
+        print("⚠️  PLACEHOLDER news data — 8 templated headlines on a 3-day cycle.")
+        print("   This is NOT real news. Sentiment results from it are meaningless.")
         
         # Create sample headlines
         sample_headlines = [
